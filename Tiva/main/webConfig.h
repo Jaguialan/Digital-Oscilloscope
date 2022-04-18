@@ -1,0 +1,7 @@
+#ifndef _WEBCONFIG_H
+#define _WEBCONFIG_H
+
+String webHTML = "<html><head><title>Digital Oscilloscope Julia Uruel & Javier Lazaro</title><link rel=\"stylesheet\" href=\"/styles.css\"></head><body><div class=\"maincontainer\"><h1 class=\"container maintitle\"><p class=\"paragraph\">Proyectos Experimentales II</p></h1><h3 class=\"container\"><p class=\"paragraph\">Daniel Uruel & Javier Lazaro</p><p class=\"paragraph\">Daniel Uruel & Javier Lazaro</p></h3>LED 1<button id=\"button\" onclick=\"location.href='/LED1_H'\">HIGH</button><button onclick=\"location.href='/LED1_L'\">LOW</button><br>LED 2 <button onclick=\"location.href='/LED2_H'\">HIGH</button><button onclick=\"location.href='/LED2_L'\">LOW</button><br><br><a href=\"/config.html\">refresh</a> <br></div></body></html>";
+String webCSS = "*{margin: 0;padding: 0;box-sizing: border-box;}body{ /* Tipo de elemento */color: whitesmoke;background-color: black;}.maincontainer{border: 1px solid whitesmoke;width: 100vw;display: flex;flex-direction: column;justify-content: space-around;align-items: center;height: 100vh;}.container{ /* clases */border: 2px solid green;width: 50%;display: flex;flex-direction: column;justify-content: center;align-items: center;}.maintitle{ /* clases */font-family: sans-serif;color: rebeccapurple;}.container.maintitle{color: burlywood;}#button{ /* ID */background-color: cadetblue;}.paragraph{border: 1px solid coral;width: fit-content;padding: 10 10 10 10;}.maintitle .paragraph{margin-top: 50px;margin-bottom: 50px;}";
+
+#endif
