@@ -1,58 +1,90 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+font-family: 'Courier New', Courier, monospace;
+margin: 0;
+padding: 0;
+box-sizing: border-box;
 }
 
-body {
-    /* Tipo de elemento */
-    color: whitesmoke;
-    background-color: black;
+hr {
+background-color: #D81E5B;
+color: #D81E5B;
 }
 
-.maincontainer {
-    border: 1px solid whitesmoke;
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
-    height: 100vh;
+.mainContent {
+background-color: #3A3335;
+
 }
 
-.container {
-    /* clases */
-    border: 2px solid green;
-    width: 50%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+.header {
+align-items: center;
+text-align: center;
+color: #D81E5B;
 }
 
-.maintitle {
-    /* clases */
-    font-family: sans-serif;
-    color: rebeccapurple;
+.mainContent.header {
+
+align-items: center;
+text-align: center;
+color: #D81E5B;
+
 }
 
-.container.maintitle {
-    color: burlywood;
+.footer {
+
+color: #3A3335;
+align-items: center;
+text-align: center;
+background-color: #D81E5B;
 }
 
-#button {
-    /* ID */
-    background-color: cadetblue;
+.dropDown{
+margin-left: 5px;
+border: 1px solid #F0544F ;
+color: #F0544F;
+background-color: #3A3335;
+
+width: 5vw;
+height: 1.5rem;
+padding: 2px  2px  2px  2px;
 }
 
-.paragraph {
-
-    border: 1px solid coral;
-    width: fit-content;
-    padding: 10 10 10 10;
+.dataField{
+margin-bottom: 10px;
 }
 
-.maintitle .paragraph {
-    margin-top: 50px;
-    margin-bottom: 50px;
+.dataField p span{
+color: #fdf0d5;
+}
+
+.oscMainBody{
+display: flex;
+flex-direction: row;
+}
+
+.oscValsLeft {
+color: #F0544F;
+width: fit-content;
+margin-left: 10px;
+padding-top: 10px;
+padding-bottom: 10px;
+text-align: right;
+flex-shrink: 0;
+}
+
+.oscValsCenter{
+color: #fdf0d5;
+width: fit-content;
+margin-left: 100px;
+padding-top: 10px;
+padding-bottom: 10px;
+text-align: center;
+}
+
+.oscValsRight{
+color: #F0544F;
+width: fit-content;
+margin-left: 100px;
+padding-top: 10px;
+padding-bottom: 10px;
+text-align: center;
 }

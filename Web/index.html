@@ -1,28 +1,79 @@
-<html>
+<!DOCTYPE html>
+<html lang="en-US" encoding="UTF-16">
 
 <head>
-    <title>Digital Oscilloscope Julia Uruel & Javier Lazaro</title>
-    <link rel="stylesheet" href="/styles.css">
+<title>Digital Oscilloscope</title>
+<link rel="stylesheet" href="styles.css">
+<script src="main.js" defer></script>
 </head>
 
 <body>
-    <div class="maincontainer">
-        <h1 class="container maintitle">
-            <p class="paragraph">Proyectos Experimentales II</p>
-        </h1>
-        <h3 class="container">
-            <p class="paragraph">Daniel Uruel & Javier Lazaro</p>
-            <p class="paragraph">Daniel Uruel & Javier Lazaro</p>
-        </h3>
+<section class="mainContent">
+<div class="header">
+<br>
+<h4>Proyectos Experimentales II</h4>
+<h1>OSCILOSCOPIO DIGITAL</h1>
+<br>
+<hr>
+</div>
+<div class="oscMainBody">
+<div class="oscValsLeft">
+Units<br>
 
-        LED 1<button id="button" onclick="location.href='/LED1_H'">HIGH</button>
-        <button onclick="location.href='/LED1_L'">LOW</button><br>
-        LED 2 <button onclick="location.href='/LED2_H'">HIGH</button>
-        <button onclick="location.href='/LED2_L'">LOW</button><br><br>
+<div class="dataField">
+<p style="display: inline-block" id="Vpp">
+Vpeak-peak: NaN
+</p>
+<select class="dropDown" onchange="update_vpp(event)">
+<option>Vpp</option>
+<option>mVpp</option>
+</select>
+</div>
 
-        <a href="/config.html">refresh</a> <br>
-    </div>
+<div class="dataField">
+<p style="display: inline-block" id="Vp">
+Vpeak: NaN
+</p>
+<select class="dropDown" onchange="update_vp(event)">
+<option>Vp</option>
+<option>mVp</option>
+</select>
+</div>
 
+<div class="dataField">
+<p style="display: inline-block" id="Freq">
+Frequency: NaN
+</p>
+<select class="dropDown" onchange="update_freq(event)">
+<option>Hz</option>
+<option>kHz</option>
+</select>
+</div>
+
+<div class="dataField">
+<p style="display: inline-block" id="Period">
+Period: NaN
+</p>
+<select class="dropDown" onchange="update_period(event)">
+<option>s</option>
+<option>ms</option>
+</select>
+</div>
+</div>
+
+<div class="oscValsCenter">
+<h1>SELECIONE LAS UNIDADES</h1>
+</div>
+<div class="oscValsRight">
+<h1>M&AacuteSTER EN INGENIER&IacuteA DE SISTEMAS ELECTR&OacuteNICOS Y APLICACIONES</h1>
+</div>
+</div>
+<footer class="footer">
+<div>
+<h6>&copy Javier L&aacutezaro Fern&aacutendez &amp; Julia Uruel Sanz - MISEA 2022</h6>
+</div>
+</footer>
+</section>
 </body>
 
 </html>

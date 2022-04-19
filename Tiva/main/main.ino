@@ -9,9 +9,37 @@
 // Prototypes
 void printHTML();
 void printCSS();
+void printJs();
 void printEthernetData();
+void updateHTML(bool, uint8_t);
 
 EthernetServer server(80);
+
+// Variables
+bool rawPage = true;
+
+bool vpp_units = false;    // default units false: V true mV
+bool vp_units = false;     // default units false: V true mV
+bool freq_units = false;   // default units false: Hz true kHz
+bool period_units = false; // default units false: s true ms
+
+uint8_t vpp = 100;
+uint8_t vp = 200;
+uint8_t freq = 200;
+uint8_t period = 200;
+
+uint8_t last_vpp = 0;
+uint8_t last_vp = 0;
+uint8_t last_freq = 0;
+uint8_t last_period = 0;
+
+enum ref
+{
+  vpp_ref = 0,
+  vp_ref,
+  freq_ref,
+  period_ref
+};
 
 void setup()
 {
@@ -49,9 +77,10 @@ void loop()
     String currentLine = "";             // make a String to hold incoming data from the client
     boolean newConnection = true;        // flag for new connections
     unsigned long connectionActiveTimer; // will hold the connection start time
-
+    digitalWrite(D1_LED, HIGH);
     while (client.connected())
     { // loop while the client's connected
+      digitalWrite(D2_LED, HIGH);
       if (newConnection)
       {                                   // it's a new connection, so
         connectionActiveTimer = millis(); // log when the connection started
@@ -93,9 +122,30 @@ void loop()
         {
           printCSS();
         }
+        else if (currentLine.endsWith("GET /main.js "))
+        {
+          printJs();
+        }
+        else if (currentLine.endsWith("GET /vpp_units "))
+        {
+          client.println(vpp);
+        }
+        else if (currentLine.endsWith("GET /vp_units "))
+        {
+          client.println(vp);
+        }
+        else if (currentLine.endsWith("GET /freq_units "))
+        {
+          client.println(freq);
+        }
+        else if (currentLine.endsWith("GET /period_units "))
+        {
+          client.println(period);
+        }
       }
     }
     // close the connection:
+    digitalWrite(D2_LED, LOW);
     client.stop();
     // Serial.println("client disonnected");
   }
@@ -123,6 +173,14 @@ void printCSS()
   client.println(webCSS);
 
   // break out of the while loop:
+}
+
+void printJs()
+{
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-type:text/js");
+  client.println();
+  client.println(webJs);
 }
 
 void printEthernetData()
