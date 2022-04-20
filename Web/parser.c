@@ -118,7 +118,7 @@ int main()
     fprintf(outFile, "\";\n");
 
     fputc('\n', outFile);
-    fputc('\n', outFile);
+
     fprintf(outFile, "\n#endif\n");
 
     fclose(jsFile);

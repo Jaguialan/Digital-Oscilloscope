@@ -37,26 +37,45 @@ text-align: center;
 background-color: #D81E5B;
 }
 
-.dropDown{
+.dropDown {
 margin-left: 5px;
-border: 1px solid #F0544F ;
+border: 1px solid #F0544F;
 color: #F0544F;
 background-color: #3A3335;
 
 width: 5vw;
 height: 1.5rem;
-padding: 2px  2px  2px  2px;
+padding: 2px 2px 2px 2px;
 }
 
-.dataField{
+.buttonCase {
+margin-left: 5px;
+margin-bottom: 10px;
+margin-top: 10px;
+border: 1px solid #F0544F;
+color: #F0544F;
+background-color: #3A3335;
+
+width: 5vw;
+height: 1.5rem;
+padding: 2px 2px 2px 2px;
+}
+
+.dataField {
 margin-bottom: 10px;
 }
 
-.dataField p span{
+.dataField p span {
 color: #fdf0d5;
 }
 
-.oscMainBody{
+.mainText {
+color: #fdf0d5;
+text-align: center;
+margin-bottom: 10px;
+}
+
+.oscMainBody {
 display: flex;
 flex-direction: row;
 }
@@ -71,20 +90,22 @@ text-align: right;
 flex-shrink: 0;
 }
 
-.oscValsCenter{
+.oscValsCenter {
 color: #fdf0d5;
 width: fit-content;
-margin-left: 100px;
+margin-left: 30px;
 padding-top: 10px;
 padding-bottom: 10px;
 text-align: center;
+flex-shrink: 0;
 }
 
-.oscValsRight{
-color: #F0544F;
+.oscValsRight {
+color: #fdf0d5;
 width: fit-content;
-margin-left: 100px;
+margin-left: 40px;
 padding-top: 10px;
 padding-bottom: 10px;
 text-align: center;
+flex-shrink: 0;
 }

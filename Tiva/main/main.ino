@@ -1,7 +1,7 @@
 /*
   Internet connectivity example (web server)
  Derived from example Sketch by Hans Scharler (http://www.iamshadowlord.com)
-  */
+*/
 
 #include "Ethernet.h"
 #include "webConfig.h"
@@ -16,30 +16,11 @@ void updateHTML(bool, uint8_t);
 EthernetServer server(80);
 
 // Variables
-bool rawPage = true;
 
-bool vpp_units = false;    // default units false: V true mV
-bool vp_units = false;     // default units false: V true mV
-bool freq_units = false;   // default units false: Hz true kHz
-bool period_units = false; // default units false: s true ms
-
-uint8_t vpp = 100;
-uint8_t vp = 200;
-uint8_t freq = 200;
-uint8_t period = 200;
-
-uint8_t last_vpp = 0;
-uint8_t last_vp = 0;
-uint8_t last_freq = 0;
-uint8_t last_period = 0;
-
-enum ref
-{
-  vpp_ref = 0,
-  vp_ref,
-  freq_ref,
-  period_ref
-};
+uint16_t vpp = 0;    // [0-255]
+uint16_t vp = 0;     // [0-255]
+uint16_t freq = 0;   // [0-255]
+uint16_t period = 0; // [0-255]
 
 void setup()
 {
@@ -77,7 +58,9 @@ void loop()
     String currentLine = "";             // make a String to hold incoming data from the client
     boolean newConnection = true;        // flag for new connections
     unsigned long connectionActiveTimer; // will hold the connection start time
+
     digitalWrite(D1_LED, HIGH);
+    
     while (client.connected())
     { // loop while the client's connected
       digitalWrite(D2_LED, HIGH);
