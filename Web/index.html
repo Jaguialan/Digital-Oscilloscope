@@ -26,8 +26,8 @@
 Vpeak-peak: NaN
 </p>
 <select class="dropDown" onchange="update_vpp(event)">
-<option>Vpp</option>
 <option>mVpp</option>
+<option>Vpp</option>
 </select>
 </div>
 
@@ -36,8 +36,8 @@ Vpeak-peak: NaN
 Vpeak: NaN
 </p>
 <select class="dropDown" onchange="update_vp(event)">
-<option>Vp</option>
 <option>mVp</option>
+<option>Vp</option>
 </select>
 </div>
 
@@ -56,8 +56,8 @@ Frequency: NaN
 Period: NaN
 </p>
 <select class="dropDown" onchange="update_period(event)">
-<option>s</option>
 <option>ms</option>
+<option>s</option>
 </select>
 </div>
 </div>
@@ -93,13 +93,23 @@ Period: NaN
 </div>
 </div>
 <div class="oscValsRight">
-<a href="/ ">Refrescar valores</a> <br>
+<a style="border: 1px solid; padding: 4.5px; white" onclick="update_vpp(event); update_vp(event); update_freq(event); update_period(event);">Refrescar valores</a> <br>
 </div>
 <footer class="footer">
 <div>
-<h6>&copy Javier L&aacutezaro Fern&aacutendez &amp; Julia Uruel Sanz - MISEA 2022 - M&AacuteSTER EN
+<h6 id="update_all_vars" onload="update_all()">&copy Javier L&aacutezaro Fern&aacutendez &amp; Julia Uruel Sanz - MISEA 2022 - M&AacuteSTER EN
 INGENIER&IacuteA DE SISTEMAS ELECTR&OacuteNICOS Y APLICACIONES</h6>
 </div>
+
+<script>
+function update_all(){
+update_vpp();
+update_vp();
+update_freq();
+update_period();
+alert("no funsiona");
+}
+</script>
 </footer>
 </section>
 </body>
