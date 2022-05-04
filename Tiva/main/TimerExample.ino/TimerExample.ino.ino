@@ -121,6 +121,7 @@ double sineWave[640] = {0x80, 0x81, 0x82, 0x83, 0x85, 0x86, 0x87, 0x88,
 
 unsigned long peak1 = 0;
 unsigned long peak2 = 0;
+uint8_t last = 80;
 
 bool peak1Flag = false;
 bool increase = false;
@@ -307,7 +308,10 @@ void Timer2IntHandler()
   // Serial.println("Hz");
 
   measure = true;
-  dataIn = analogRead(PORT1);
+  // dataIn = analogRead(PORT1);
+
+  dataIn = sineWave[i];
+  i = ++i % 640;
 
   // for (uint16_t index = 0; index < 640; index++)
   //{
