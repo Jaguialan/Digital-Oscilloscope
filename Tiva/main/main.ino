@@ -25,7 +25,7 @@ float period = 1;
 void setup()
 {
   Serial.begin(115200);
-
+  Serial6.begin(9600);
   pinMode(D1_LED, OUTPUT);
   pinMode(D2_LED, OUTPUT);
   pinMode(PUSH1, INPUT_PULLUP); // released = HIGH, pressed = LOW
@@ -182,6 +182,7 @@ void printEthernetData()
 void printHTML(){
 client.println("HTTP/1.1 200 OK");
 client.println("Content-type:text/html");
+//client.println("Refresh: 5");
 client.println();
 client.println("<!DOCTYPE html>");
 client.println("<html lang=\"en-US\" encoding=\"UTF-16\">");
@@ -208,7 +209,16 @@ client.println("<h1 class=\"mainText\">VALORES</h1>");
 client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Vpp\">");
-client.println("Vpeak-peak: NaN");
+client.print("Vpeak-peak: ");
+if (Serial6.available()) {
+    char inByte = Serial6.read();
+    if(inByte == 'v'){
+      Serial.println("Hellow world");
+      vpp = Serial6.read();
+    }
+    Serial.println(inByte); 
+  }
+client.println(vpp);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_vpp(event)\">");
 client.println("<option>mVpp</option>");
@@ -219,7 +229,7 @@ client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Vp\">");
 client.print("Vpeak: ");
-client.println(vpp);
+client.println(vp);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_vp(event)\">");
 client.println("<option>mVp</option>");
@@ -229,7 +239,8 @@ client.println("</div>");
 client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Freq\">");
-client.println("Frequency: NaN");
+client.print("Frequency: ");
+client.println(freq);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_freq(event)\">");
 client.println("<option>Hz</option>");
@@ -239,7 +250,8 @@ client.println("</div>");
 client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Period\">");
-client.println("Period: NaN");
+client.print("Period: ");
+client.println(period);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_period(event)\">");
 client.println("<option>ms</option>");

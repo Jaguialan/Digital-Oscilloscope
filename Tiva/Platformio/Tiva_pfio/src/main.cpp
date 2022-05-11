@@ -11,7 +11,7 @@
 
 #define SYSTEM_CLOCK 120000000
 
-#define TIMERFREQ 500 // 2^16 1831
+#define TIMERFREQ 6400 // 2^16 1831
 #define BUFFERSIZE 1024
 #define DATATOSEND 640 // 640
 #define INTERVAL 2
@@ -97,6 +97,7 @@ void setup()
   // put your setup code here, to run once:
 
   Serial.begin(115200);
+  Serial6.begin(9600);
   Serial7.begin(100000);
   delay(1000);
   // Serial.println("data:,peak:,filtered");
@@ -119,7 +120,7 @@ void loop()
     // Serial.println(dataIn);
     // j = (++j) % 640;
     signal_filtered = filter(dataIn);
-    //signal_filtered = dataIn;
+    // signal_filtered = dataIn;
     peakDetection.add(signal_filtered);
     lastPeak = peak;
     peak = peakDetection.getPeak();
@@ -127,7 +128,7 @@ void loop()
 
     dataIn = map(dataIn, 0, 4095, 0, 254);
     filtered = map(filtered, 0, 4095, 0, 254);
-    //filtered = dataIn;
+    // filtered = dataIn;
     if (((filtered <= (triggerVal + INTERVAL)) && (filtered >= (triggerVal - INTERVAL))) && (peak == 1))
     {
       trigger = true;
@@ -188,7 +189,11 @@ void loop()
           // delayMicroseconds(1);
 #endif
         }
-        Serial7.write(140);
+        Serial7.write(100);
+
+        Serial6.write('v');
+        // Serial6.print(",");
+        Serial6.print(freq);
 
         send = 0;
         trigger = false;
