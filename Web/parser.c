@@ -45,10 +45,18 @@ int main()
     fprintf(outFile, "#ifndef _WEBCONFIG_H\n");
     fprintf(outFile, "#define _WEBCONFIG_H\n\n");
 
-    fprintf(outFile, "String webHTML = \"");
+    fprintf(outFile, "void printHTML(){\n");
+
+    fprintf(outFile, "client.println(\"HTTP/1.1 200 OK\");\n");
+    fprintf(outFile, "client.println(\"Content-type:text/html\");\n");
+    // client.println("Refresh: 5");
+    //  client.println("Connection: close");
+    fprintf(outFile, "client.println();\n");
+
+    fprintf(outFile, "client.println(\"");
     do
     {
-
+        // client.println("
         c = fgetc(HTMLFile);
 
         if (c != 13 && c != 10 && c != 11 && c != EOF)
@@ -63,9 +71,13 @@ int main()
                 fputc(c, outFile);
             }
         }
+        else if (c == 10)
+        {
+            fprintf(outFile, "\");\nclient.println(\"");
+        }
     } while (c != EOF);
-
-    fprintf(outFile, "\";\n");
+    fprintf(outFile, "\");\n");
+    fprintf(outFile, "}\n\n");
     fclose(HTMLFile);
 
     //////////////////////////////////////////////////////////////////////////

@@ -101,7 +101,6 @@ void loop()
         }
         if (currentLine.endsWith("GET / "))
         {
-          Serial.println(webHTML);
           printHTML();
         }
         else if (currentLine.endsWith("GET /styles.css "))
@@ -129,6 +128,7 @@ void loop()
           client.println(period);
         }
       }
+      Serial.println("HERE");
     }
     // close the connection:
     digitalWrite(D2_LED, LOW);
@@ -137,30 +137,12 @@ void loop()
   }
 }
 
-void printHTML()
-{
-  // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-  // and a content-type so the client knows what's coming, then a blank line:
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-type:text/html");
-  client.println("Refresh: 5");
-  // client.println("Connection: close");
-  client.println();
-  client.println(webHTML);
-
-  // break out of the while loop:
-}
-
 void printCSS()
 {
-  // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-  // and a content-type so the client knows what's coming, then a blank line:
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/css");
   client.println();
   client.println(webCSS);
-
-  // break out of the while loop:
 }
 
 void printJs()
@@ -195,4 +177,128 @@ void printEthernetData()
   IPAddress dns = Ethernet.dnsServerIP();
   Serial.print("DNS:\t\t");
   Serial.println(dns);
+}
+
+void printHTML(){
+client.println("HTTP/1.1 200 OK");
+client.println("Content-type:text/html");
+client.println();
+client.println("<!DOCTYPE html>");
+client.println("<html lang=\"en-US\" encoding=\"UTF-16\">");
+client.println("");
+client.println("<head>");
+client.println("<title>Digital Oscilloscope</title>");
+client.println("<link rel=\"stylesheet\" href=\"styles.css\">");
+client.println("<script src=\"main.js\" defer></script>");
+client.println("</head>");
+client.println("");
+client.println("<body>");
+client.println("<section class=\"mainContent\">");
+client.println("<div class=\"header\">");
+client.println("<br>");
+client.println("<h4>Proyectos Experimentales II</h4>");
+client.println("<h1>OSCILOSCOPIO DIGITAL</h1>");
+client.println("<br>");
+client.println("<hr>");
+client.println("</div>");
+client.println("<div class=\"oscMainBody\">");
+client.println("<div class=\"oscValsLeft\">");
+client.println("");
+client.println("<h1 class=\"mainText\">VALORES</h1>");
+client.println("");
+client.println("<div class=\"dataField\">");
+client.println("<p style=\"display: inline-block\" id=\"Vpp\">");
+client.println("Vpeak-peak: NaN");
+client.println("</p>");
+client.println("<select class=\"dropDown\" onchange=\"update_vpp(event)\">");
+client.println("<option>mVpp</option>");
+client.println("<option>Vpp</option>");
+client.println("</select>");
+client.println("</div>");
+client.println("");
+client.println("<div class=\"dataField\">");
+client.println("<p style=\"display: inline-block\" id=\"Vp\">");
+client.print("Vpeak: ");
+client.println(vpp);
+client.println("</p>");
+client.println("<select class=\"dropDown\" onchange=\"update_vp(event)\">");
+client.println("<option>mVp</option>");
+client.println("<option>Vp</option>");
+client.println("</select>");
+client.println("</div>");
+client.println("");
+client.println("<div class=\"dataField\">");
+client.println("<p style=\"display: inline-block\" id=\"Freq\">");
+client.println("Frequency: NaN");
+client.println("</p>");
+client.println("<select class=\"dropDown\" onchange=\"update_freq(event)\">");
+client.println("<option>Hz</option>");
+client.println("<option>kHz</option>");
+client.println("</select>");
+client.println("</div>");
+client.println("");
+client.println("<div class=\"dataField\">");
+client.println("<p style=\"display: inline-block\" id=\"Period\">");
+client.println("Period: NaN");
+client.println("</p>");
+client.println("<select class=\"dropDown\" onchange=\"update_period(event)\">");
+client.println("<option>ms</option>");
+client.println("<option>s</option>");
+client.println("</select>");
+client.println("</div>");
+client.println("</div>");
+client.println("");
+client.println("<div class=\"oscValsCenter\">");
+client.println("<h1>ESCALA DE TIEMPO</h1>");
+client.println("<div>");
+client.println("<p style=\"display: inline-block\">");
+client.println("<button type=\"button\" class=\"buttonCase\" id=\"incTimeScale\">&#129045 s/div</button>");
+client.println("</p>");
+client.println("");
+client.println("</div>");
+client.println("<div>");
+client.println("<p style=\"display: inline-block\">");
+client.println("<button type=\"button\" class=\"buttonCase\" id=\"decTimeScale\">&#129047 s/div</button>");
+client.println("</p>");
+client.println("</div>");
+client.println("");
+client.println("</div>");
+client.println("<div class=\"oscValsRight\">");
+client.println("<h1>ESCALA DE VOLTAJE</h1>");
+client.println("<div>");
+client.println("<p style=\"display: inline-block\">");
+client.println("<button type=\"button\" class=\"buttonCase\" id=\"incVScale\">&#129045 V/div</button>");
+client.println("</p>");
+client.println("");
+client.println("</div>");
+client.println("<div>");
+client.println("<p style=\"display: inline-block\">");
+client.println("<button type=\"button\" class=\"buttonCase\" id=\"decVScale\">&#129047 V/div</button>");
+client.println("</p>");
+client.println("</div>");
+client.println("</div>");
+client.println("</div>");
+client.println("<div class=\"oscValsRight\">");
+client.println("<a style=\"border: 1px solid; padding: 4.5px; white\" onclick=\"update_vpp(event); update_vp(event); update_freq(event); update_period(event);\">Refrescar valores</a> <br>");
+client.println("</div>");
+client.println("<footer class=\"footer\">");
+client.println("<div>");
+client.println("<h6 id=\"update_all_vars\" onload=\"update_all()\">&copy Javier L&aacutezaro Fern&aacutendez &amp; Julia Uruel Sanz - MISEA 2022 - M&AacuteSTER EN");
+client.println("INGENIER&IacuteA DE SISTEMAS ELECTR&OacuteNICOS Y APLICACIONES</h6>");
+client.println("</div>");
+client.println("");
+client.println("<script>");
+client.println("function update_all(){");
+client.println("update_vpp();");
+client.println("update_vp();");
+client.println("update_freq();");
+client.println("update_period();");
+client.println("alert(\"no funsiona\");");
+client.println("}");
+client.println("</script>");
+client.println("</footer>");
+client.println("</section>");
+client.println("</body>");
+client.println("");
+client.println("</html>");
 }

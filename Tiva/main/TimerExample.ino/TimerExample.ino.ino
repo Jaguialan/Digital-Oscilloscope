@@ -1,321 +1,114 @@
-// MISEA-UC3M 2014-15
-// Timer example
-// Proyectos Experimentales I
-// Proyectos Experimentales II
-// Copy Right Universidad Carlos III de Madrid
+#include <Arduino.h>
 
 #include "Energia.h"
-#include <stdint.h> // standard library for integers (used in the next libraries)
-#include "inc/hw_ints.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/timer.h"
-#include "PeakDetection.h"
 
-#define SYSTEM_CLOCK 120000000
+/*
+  Example of use of the FFT library
+        Copyright (C) 2014 Enrique Condes
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
-#define TIMERFREQ 5000
-#define TIMERFREQ2 1000
+/*
+  In this example, the Arduino simulates the sampling of a sinusoidal 1000 Hz
+  signal with an amplitude of 100, sampled at 5000 Hz. Samples are stored
+  inside the vReal array. The samples are windowed according to Hamming
+  function. The FFT is computed using the windowed samples. Then the magnitudes
+  of each of the frequencies that compose the signal are calculated. Finally,
+  the frequency with the highest peak is obtained, being that the main frequency
+  present in the signal.
+*/
 
-#define PORT1 PE_0
+#include "arduinoFFT.h"
 
-uint16_t i = 0;
-float j = 0;
+arduinoFFT FFT = arduinoFFT(); /* Create FFT object */
+/*
+These values can be changed in order to evaluate the functions
+*/
+const uint16_t samples = 64; //This value MUST ALWAYS be a power of 2
+const double signalFrequency = 1000;
+const double samplingFrequency = 5000;
+const uint8_t amplitude = 100;
+/*
+These are the input and output vectors
+Input vectors receive computed results from FFT
+*/
+double vReal[samples];
+double vImag[samples];
 
-float peak_p = 0;
-float peak_m = 0;
-
-bool printSine = false;
-
-float vpp = 0;
-unsigned long period = 0;
-float freq = 0;
-
-bool trigger = false;
-bool triggerSend = false;
-bool measure = false;
-uint16_t send = 0;
-uint16_t dataIn = 0;
-
-uint16_t serialBuffer[640] = {0};
-double sineWave[640] = {0x80, 0x81, 0x82, 0x83, 0x85, 0x86, 0x87, 0x88,
-                        0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x90, 0x91, 0x92,
-                        0x93, 0x95, 0x96, 0x97, 0x98, 0x9a, 0x9b, 0x9c,
-                        0x9d, 0x9e, 0xa0, 0xa1, 0xa2, 0xa3, 0xa5, 0xa6,
-                        0xa7, 0xa8, 0xa9, 0xaa, 0xac, 0xad, 0xae, 0xaf,
-                        0xb0, 0xb1, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8,
-                        0xb9, 0xba, 0xbc, 0xbd, 0xbe, 0xbf, 0xc0, 0xc1,
-                        0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9,
-                        0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1,
-                        0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9,
-                        0xda, 0xdb, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 0xe0,
-                        0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe4, 0xe5, 0xe6,
-                        0xe7, 0xe7, 0xe8, 0xe9, 0xea, 0xea, 0xeb, 0xec,
-                        0xec, 0xed, 0xed, 0xee, 0xef, 0xef, 0xf0, 0xf1,
-                        0xf1, 0xf2, 0xf2, 0xf3, 0xf3, 0xf4, 0xf4, 0xf5,
-                        0xf5, 0xf6, 0xf6, 0xf7, 0xf7, 0xf8, 0xf8, 0xf8,
-                        0xf9, 0xf9, 0xfa, 0xfa, 0xfa, 0xfb, 0xfb, 0xfb,
-                        0xfb, 0xfc, 0xfc, 0xfc, 0xfd, 0xfd, 0xfd, 0xfd,
-                        0xfd, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe,
-                        0xfd, 0xfd, 0xfd, 0xfd, 0xfd, 0xfc, 0xfc, 0xfc,
-                        0xfb, 0xfb, 0xfb, 0xfb, 0xfa, 0xfa, 0xfa, 0xf9,
-                        0xf9, 0xf8, 0xf8, 0xf8, 0xf7, 0xf7, 0xf6, 0xf6,
-                        0xf5, 0xf5, 0xf4, 0xf4, 0xf3, 0xf3, 0xf2, 0xf2,
-                        0xf1, 0xf1, 0xf0, 0xef, 0xef, 0xee, 0xed, 0xed,
-                        0xec, 0xec, 0xeb, 0xea, 0xea, 0xe9, 0xe8, 0xe7,
-                        0xe7, 0xe6, 0xe5, 0xe4, 0xe4, 0xe3, 0xe2, 0xe1,
-                        0xe0, 0xe0, 0xdf, 0xde, 0xdd, 0xdc, 0xdb, 0xdb,
-                        0xda, 0xd9, 0xd8, 0xd7, 0xd6, 0xd5, 0xd4, 0xd3,
-                        0xd2, 0xd1, 0xd0, 0xcf, 0xce, 0xcd, 0xcc, 0xcb,
-                        0xca, 0xc9, 0xc8, 0xc7, 0xc6, 0xc5, 0xc4, 0xc3,
-                        0xc2, 0xc1, 0xc0, 0xbf, 0xbe, 0xbd, 0xbc, 0xba,
-                        0xb9, 0xb8, 0xb7, 0xb6, 0xb5, 0xb4, 0xb3, 0xb1,
-                        0xb0, 0xaf, 0xae, 0xad, 0xac, 0xaa, 0xa9, 0xa8,
-                        0xa7, 0xa6, 0xa5, 0xa3, 0xa2, 0xa1, 0xa0, 0x9e,
-                        0x9d, 0x9c, 0x9b, 0x9a, 0x98, 0x97, 0x96, 0x95,
-                        0x93, 0x92, 0x91, 0x90, 0x8e, 0x8d, 0x8c, 0x8b,
-                        0x8a, 0x88, 0x87, 0x86, 0x85, 0x83, 0x82, 0x81,
-                        0x80, 0x7e, 0x7d, 0x7c, 0x7a, 0x79, 0x78, 0x77,
-                        0x75, 0x74, 0x73, 0x72, 0x71, 0x6f, 0x6e, 0x6d,
-                        0x6c, 0x6a, 0x69, 0x68, 0x67, 0x65, 0x64, 0x63,
-                        0x62, 0x61, 0x5f, 0x5e, 0x5d, 0x5c, 0x5a, 0x59,
-                        0x58, 0x57, 0x56, 0x55, 0x53, 0x52, 0x51, 0x50,
-                        0x4f, 0x4e, 0x4c, 0x4b, 0x4a, 0x49, 0x48, 0x47,
-                        0x46, 0x45, 0x43, 0x42, 0x41, 0x40, 0x3f, 0x3e,
-                        0x3d, 0x3c, 0x3b, 0x3a, 0x39, 0x38, 0x37, 0x36,
-                        0x35, 0x34, 0x33, 0x32, 0x31, 0x30, 0x2f, 0x2e,
-                        0x2d, 0x2c, 0x2b, 0x2a, 0x29, 0x28, 0x27, 0x26,
-                        0x25, 0x24, 0x24, 0x23, 0x22, 0x21, 0x20, 0x1f,
-                        0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1b, 0x1a, 0x19,
-                        0x18, 0x18, 0x17, 0x16, 0x15, 0x15, 0x14, 0x13,
-                        0x13, 0x12, 0x12, 0x11, 0x10, 0x10, 0xf, 0xe,
-                        0xe, 0xd, 0xd, 0xc, 0xc, 0xb, 0xb, 0xa,
-                        0xa, 0x9, 0x9, 0x8, 0x8, 0x7, 0x7, 0x7,
-                        0x6, 0x6, 0x5, 0x5, 0x5, 0x4, 0x4, 0x4,
-                        0x4, 0x3, 0x3, 0x3, 0x2, 0x2, 0x2, 0x2,
-                        0x2, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1, 0x0,
-                        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-                        0x0, 0x0, 0x1, 0x1, 0x1, 0x1, 0x1, 0x1,
-                        0x2, 0x2, 0x2, 0x2, 0x2, 0x3, 0x3, 0x3,
-                        0x4, 0x4, 0x4, 0x4, 0x5, 0x5, 0x5, 0x6,
-                        0x6, 0x7, 0x7, 0x7, 0x8, 0x8, 0x9, 0x9,
-                        0xa, 0xa, 0xb, 0xb, 0xc, 0xc, 0xd, 0xd,
-                        0xe, 0xe, 0xf, 0x10, 0x10, 0x11, 0x12, 0x12,
-                        0x13, 0x13, 0x14, 0x15, 0x15, 0x16, 0x17, 0x18,
-                        0x18, 0x19, 0x1a, 0x1b, 0x1b, 0x1c, 0x1d, 0x1e,
-                        0x1f, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x24,
-                        0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c,
-                        0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34,
-                        0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c,
-                        0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x45,
-                        0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4e,
-                        0x4f, 0x50, 0x51, 0x52, 0x53, 0x55, 0x56, 0x57,
-                        0x58, 0x59, 0x5a, 0x5c, 0x5d, 0x5e, 0x5f, 0x61,
-                        0x62, 0x63, 0x64, 0x65, 0x67, 0x68, 0x69, 0x6a,
-                        0x6c, 0x6d, 0x6e, 0x6f, 0x71, 0x72, 0x73, 0x74,
-                        0x75, 0x77, 0x78, 0x79, 0x7a, 0x7c, 0x7d, 0x7e};
-
-unsigned long peak1 = 0;
-unsigned long peak2 = 0;
-uint8_t last = 80;
-
-bool peak1Flag = false;
-bool increase = false;
-
-PeakDetection peakDetection;
-
-// Prototypes
-
-void initTimer(unsigned Hz)
-{
-  // GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
-  SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
-  IntMasterEnable(); // Enable Interrupts
-  TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
-  unsigned long ulPeriod = (SYSTEM_CLOCK / Hz);
-  TimerLoadSet(TIMER1_BASE, TIMER_A, ulPeriod - 1);
-  TimerIntRegister(TIMER1_BASE, TIMER_A, Timer0IntHandler);
-  IntEnable(INT_TIMER1A);
-  TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-  TimerEnable(TIMER1_BASE, TIMER_A);
-}
-
-void initTimer2(unsigned Hz)
-{
-  // GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
-  SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER6);
-  IntMasterEnable(); // Enable Interrupts
-  TimerConfigure(TIMER6_BASE, TIMER_CFG_PERIODIC);
-  unsigned long ulPeriod = (SYSTEM_CLOCK / Hz);
-  TimerLoadSet(TIMER6_BASE, TIMER_A, ulPeriod - 1);
-  TimerIntRegister(TIMER6_BASE, TIMER_A, Timer2IntHandler);
-  IntEnable(INT_TIMER6A);
-  TimerIntEnable(TIMER6_BASE, TIMER_TIMA_TIMEOUT);
-  TimerEnable(TIMER6_BASE, TIMER_A);
-}
+#define SCL_INDEX 0x00
+#define SCL_TIME 0x01
+#define SCL_FREQUENCY 0x02
+#define SCL_PLOT 0x03
 
 void setup()
 {
-  // put your setup code here, to run once:
-
   Serial.begin(115200);
-  Serial7.begin(10000);
-  delay(1000);
-  Serial.flush();
-  Serial.println("data:,peak:,filtered");
-  pinMode(PORT1, INPUT);
-
-  // https://github.com/leandcesar/PeakDetection
-  peakDetection.begin(1, 1, 0.8); // peakdetection.begin(lag,threshold,influence);
-  // peakDetection.begin();
-
-  initTimer(TIMERFREQ);
-  initTimer2(TIMERFREQ2);
-
-  float j = 0;
+  while(!Serial);
+  Serial.println("Ready");
 }
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
-  if (measure)
+  /* Build raw data */
+  double cycles = (((samples-1) * signalFrequency) / samplingFrequency); //Number of signal cycles that the sampling will read
+  for (uint16_t i = 0; i < samples; i++)
   {
-    measure = false;
-
-    peakDetection.add(dataIn);
-    int peak = peakDetection.getPeak();
-    uint16_t filtered = peakDetection.getFilt();
-
-    dataIn = map(dataIn, 0, 4095, 0, 255);
-    filtered = map(filtered, 0, 4095, 0, 255);
-
-    if ((filtered >= 80 && peak) || (filtered < 80 && !peak) )
-    {
-      trigger = true;
-    }
-
-    if (trigger)
-    {
-      serialBuffer[send] = filtered;
-      send++;
-      
-
-      if (send == 640)
-      {
-        trigger = false;
-        send = 0;
-        for (uint16_t index = 0; index < 640; index++)
-        {
-          Serial7.write(255 - serialBuffer[index]);
-          Serial.println(255 - serialBuffer[index]);
-        }
-      }
-    }
+    vReal[i] = int8_t((amplitude * (sin((i * (twoPi * cycles)) / samples))) / 2.0);/* Build data with positive and negative values*/
+    //vReal[i] = uint8_t((amplitude * (sin((i * (twoPi * cycles)) / samples) + 1.0)) / 2.0);/* Build data displaced on the Y axis to include only positive values*/
+    vImag[i] = 0.0; //Imaginary part must be zeroed in case of looping to avoid wrong calculations and overflows
   }
+  /* Print the results of the simulated sampling according to time */
+  Serial.println("Data:");
+  PrintVector(vReal, samples, SCL_TIME);
+  FFT.Windowing(vReal, samples, FFT_WIN_TYP_HAMMING, FFT_FORWARD);  /* Weigh data */
+  Serial.println("Weighed data:");
+  PrintVector(vReal, samples, SCL_TIME);
+  FFT.Compute(vReal, vImag, samples, FFT_FORWARD); /* Compute FFT */
+  Serial.println("Computed Real values:");
+  PrintVector(vReal, samples, SCL_INDEX);
+  Serial.println("Computed Imaginary values:");
+  PrintVector(vImag, samples, SCL_INDEX);
+  FFT.ComplexToMagnitude(vReal, vImag, samples); /* Compute magnitudes */
+  Serial.println("Computed magnitudes:");
+  PrintVector(vReal, (samples >> 1), SCL_FREQUENCY);
+  double x = FFT.MajorPeak(vReal, samples, samplingFrequency);
+  Serial.println(x, 6);
+  while(1); /* Run Once */
+  // delay(2000); /* Repeat after delay */
+}
 
-  /*
-  if (printSine)
+void PrintVector(double *vData, uint16_t bufferSize, uint8_t scaleType)
+{
+  for (uint16_t i = 0; i < bufferSize; i++)
   {
-    printSine = false;
-
-    // double data = sine[i];
-    double data = 255 * sin(TWO_PI * 100 * j);
-
-    i = ++i % 4096;
-
-    peakDetection.add(data);
-    int peak = peakDetection.getPeak();
-    double filtered = peakDetection.getFilt();
-
-    j += 0.1;
-    // Serial.print(data);
-    // Serial.print(",");
-    // Serial.print(peak * 255);
-    // Serial.print(",");
-    // Serial.println(filtered);
-
-    if (peak == 1)
+    double abscissa;
+    /* Print abscissa value */
+    switch (scaleType)
     {
-      if (!increase)
-      {
-        increase = true;
-        peak_m = data;
-        vpp = (peak_p - peak_m) * 3.3 / 255;
-      }
-
-      if (!peak1Flag)
-      {
-        peak1Flag = true;
-        peak1 = i;
-        //        Serial.print("Vp: ");
-        //        Serial.print(peak_p);
-        //        Serial.println("V");
-      }
-      else
-      {
-        peak1Flag = false;
-        peak2 = i;
-
-        period = (peak2 - peak1) * 5000; // sampling freq
-        freq = 1E6 / (float)period;
-      }
+      case SCL_INDEX:
+        abscissa = (i * 1.0);
+  break;
+      case SCL_TIME:
+        abscissa = ((i * 1.0) / samplingFrequency);
+  break;
+      case SCL_FREQUENCY:
+        abscissa = ((i * 1.0 * samplingFrequency) / samples);
+  break;
     }
-    else if (peak == -1)
-    {
-      if (increase)
-      {
-        increase = false;
-        peak_p = data;
-      }
-    }
-  }*/
-}
-
-void Timer0IntHandler()
-{
-  // Clear the timer interrupt
-
-  TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
-  // Timer ISR. The corresponding flag needs to be cleared.
-  // Add here the code that is going to be executed every Timer period.
-  printSine = true;
-}
-
-void Timer2IntHandler()
-{
-  // Clear the timer interrupt
-
-  TimerIntClear(TIMER6_BASE, TIMER_TIMA_TIMEOUT);
-
-  // Timer ISR. The corresponding flag needs to be cleared.
-  // Add here the code that is going to be executed every Timer period.
-
-  // Serial.print("Vpp: ");
-  // Serial.print(vpp);
-  // Serial.println("V");
-
-  // Serial.print("Period: ");
-  // Serial.print(period);
-  // Serial.println("us");
-
-  // Serial.print("Freq: ");
-  // Serial.print(freq);
-  // Serial.println("Hz");
-
-  measure = true;
-  // dataIn = analogRead(PORT1);
-
-  dataIn = sineWave[i];
-  i = ++i % 640;
-
-  // for (uint16_t index = 0; index < 640; index++)
-  //{
-  //   Serial7.write(sineWave[index]);
-  //   Serial.println(sineWave[index]);
-  //}
+    Serial.print(abscissa, 6);
+    if(scaleType==SCL_FREQUENCY)
+      Serial.print("Hz");
+    Serial.print(" ");
+    Serial.println(vData[i], 4);
+  }
+  Serial.println();
 }
