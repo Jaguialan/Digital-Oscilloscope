@@ -7,6 +7,8 @@
 #include "webConfig.h"
 #include <stdio.h>
 
+#define RATIO 0.012992
+
 // Prototypes
 void printHTML();
 void printCSS();
@@ -63,7 +65,7 @@ void loop()
 
     while (client.connected())
     { // loop while the client's connected
-
+      Serial6.flush();
       digitalWrite(D2_LED, HIGH);
 
       if (newConnection)
@@ -128,7 +130,6 @@ void loop()
           client.println(period);
         }
       }
-      Serial.println("HERE");
     }
     // close the connection:
     digitalWrite(D2_LED, LOW);
@@ -180,9 +181,22 @@ void printEthernetData()
 }
 
 void printHTML(){
+  uint8_t freqInt = 0;
+  uint8_t freqDec = 0;
+  uint8_t inByte;
+   while (Serial6.available() > 0) {
+    inByte = Serial6.read();
+    if(inByte == 0b11111111){ // Header byte
+      vpp = Serial6.read();
+      freqInt = Serial6.read();
+      freqDec = Serial6.read();
+      Serial6.flush();
+      break;
+    }
+  }
 client.println("HTTP/1.1 200 OK");
 client.println("Content-type:text/html");
-//client.println("Refresh: 5");
+client.println("Refresh: 2");
 client.println();
 client.println("<!DOCTYPE html>");
 client.println("<html lang=\"en-US\" encoding=\"UTF-16\">");
@@ -210,15 +224,7 @@ client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Vpp\">");
 client.print("Vpeak-peak: ");
-if (Serial6.available()) {
-    char inByte = Serial6.read();
-    if(inByte == 'v'){
-      Serial.println("Hellow world");
-      vpp = Serial6.read();
-    }
-    Serial.println(inByte); 
-  }
-client.println(vpp);
+client.println(vpp * RATIO);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_vpp(event)\">");
 client.println("<option>mVpp</option>");
@@ -229,7 +235,8 @@ client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Vp\">");
 client.print("Vpeak: ");
-client.println(vp);
+vp = vpp / 2;
+client.println(vp * RATIO);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_vp(event)\">");
 client.println("<option>mVp</option>");
@@ -240,6 +247,7 @@ client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Freq\">");
 client.print("Frequency: ");
+freq = freqInt + 0.01 * freqDec;
 client.println(freq);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_freq(event)\">");
@@ -251,6 +259,7 @@ client.println("");
 client.println("<div class=\"dataField\">");
 client.println("<p style=\"display: inline-block\" id=\"Period\">");
 client.print("Period: ");
+period = 1 / freq;
 client.println(period);
 client.println("</p>");
 client.println("<select class=\"dropDown\" onchange=\"update_period(event)\">");

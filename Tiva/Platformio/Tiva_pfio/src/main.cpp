@@ -11,7 +11,7 @@
 
 #define SYSTEM_CLOCK 120000000
 
-#define TIMERFREQ 6400 // 2^16 1831
+#define TIMERFREQ 1831 // 2^16 1831 8192
 #define BUFFERSIZE 1024
 #define DATATOSEND 640 // 640
 #define INTERVAL 2
@@ -70,7 +70,7 @@ uint8_t lastPeakStatus = 0;
 
 PeakDetection peakDetection;
 
-LowPassFilter filter = LowPassFilter(0.001); // Tf = 0.01S
+LowPassFilter filter = LowPassFilter(0.01); // Tf = 0.01S
 
 unsigned long lastTime = 0;
 
@@ -104,7 +104,7 @@ void setup()
   pinMode(PORT1, INPUT);
 
   // https://github.com/leandcesar/PeakDetection
-  peakDetection.begin(1, 1, 0.5); // peakdetection.begin(lag,threshold,influence); 0.8
+  peakDetection.begin(1, 1, 0.2); // peakdetection.begin(lag,threshold,influence); 0.8
   // peakDetection.begin();
 
   initTimer(TIMERFREQ);
@@ -119,8 +119,8 @@ void loop()
     // dataIn = sineWave[j];
     // Serial.println(dataIn);
     // j = (++j) % 640;
-    signal_filtered = filter(dataIn);
-    // signal_filtered = dataIn;
+    //signal_filtered = filter(dataIn);
+    signal_filtered = dataIn;
     peakDetection.add(signal_filtered);
     lastPeak = peak;
     peak = peakDetection.getPeak();
@@ -157,7 +157,7 @@ void loop()
               else
               {
                 aux2 = i;
-                if ((aux2 - aux) >= 10)
+                if ((aux2 - aux) >= 30)
                 {
                   firstPeak = false;
                   freq = ((float)(TIMERFREQ)) / ((float)(aux2 - aux));
@@ -190,10 +190,17 @@ void loop()
 #endif
         }
         Serial7.write(100);
+        uint8_t freqInt, freqDec;
+        int freqmHz;
 
-        Serial6.write('v');
-        // Serial6.print(",");
-        Serial6.print(freq);
+        freqmHz = freq * 100;
+        freqInt = freqmHz / 100;
+        freqDec = freqmHz % 100;
+
+        Serial6.write(0b11111111); // 255
+        Serial6.write(vpp);
+        Serial6.write(freqInt);
+        Serial6.write(freqDec);
 
         send = 0;
         trigger = false;
