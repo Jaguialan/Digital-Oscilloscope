@@ -119,7 +119,7 @@ void loop()
     // dataIn = sineWave[j];
     // Serial.println(dataIn);
     // j = (++j) % 640;
-    //signal_filtered = filter(dataIn);
+    // signal_filtered = filter(dataIn);
     signal_filtered = dataIn;
     peakDetection.add(signal_filtered);
     lastPeak = peak;
