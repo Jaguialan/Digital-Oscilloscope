@@ -50,6 +50,9 @@ struct channel
     uint16_t dataIndex = 0;            // Actual data index
     uint16_t dataOutIndex = 0;         // Data to be sent index
     int peak[MAX_DATA] = {0};          // If data is increasing returns 1. If data is decreasing returns -1
+    int range=10;                       // 10 to [-10,10], 4 to [-4,4], 1 to [-1,1]
+    int freq=4096;                      // 6400 son 10 ms/div  3200 20 ms/div 1600 40 ms/div 12800 Hz 5ms/div
+    int tim_div=2;                     //1=12800 Hz, 2=6400Hz, 4=3200Hz 8=1600 Hz 
     bool newData = false;              // TRUE when timer triggers
     bool trigger = false;              // TRUE if trigger is enabled
     PeakDetection peakDetection;       // Peak detector
@@ -149,7 +152,7 @@ void loop()
 
             if (ch1.trigger)
             {
-                ch1.dataOut[ch1.dataOutIndex] = map(ch1.dataFilt[ch1.dataIndex], 0, 4095, 0, 254); // Save data to out vector
+                ch1.dataOut[ch1.dataOutIndex] = map(ch1.dataFilt[ch1.dataIndex]*10/range, 0, 4095, 0, 254); // Save data to out vector
                 ch1.dataOutIndex++;
                 if (ch1.dataOutIndex == SEND_DATA) // Stop saving and compute freq
                 {
@@ -229,7 +232,8 @@ void loop()
             Serial7.write(255 - ch1.dataOut[ch1.dataOutIndex]); // Data to Basys
         }
         Serial7.write(127); // Offset
-        Serial7.write(5); //
+        Serial7.write(range/2); //volts_div
+        Serial7.write(tim_div); //tim_div
 #endif
 
         // Clean variables
