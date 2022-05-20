@@ -22,19 +22,19 @@
 
 #define DEBUG 1
 #define TIVA_WEB 0
-#define BASYS 0
+#define BASYS 1
 
-#define SERIAL_SPEED_1 256000
-#define SERIAL_SPEED_6 115200
-#define SERIAL_SPEED_7 10000
+#define SERIAL_SPEED_USB 115200
+#define SERIAL_SPEED_BASYS 100000
+#define SERIAL_SPEED_WEB 115200
 
-#define TIMER_FREQ 2000 // Frequency of the timer ISR
+#define TIMER_FREQ 4096 // Frequency of the timer ISR
 #define INTERVAL 10     // Trigger +/- interval
 #define MAX_DATA 2000   // Maximun data to store
 #define SEND_DATA 640   // Maximun data to send
 
-#define CUTTOF_FREQ 1000.0f // LPF cutoff frequency
-#define SAMPLE_TIME 0.0001f // LPF sample time
+#define CUTTOF_FREQ 6000.0f  // LPF cutoff frequency
+#define SAMPLE_TIME 0.00001f // LPF sample time
 
 /////////////////////////////////////////////////
 /////////////////// VARIABLES ///////////////////
@@ -42,9 +42,10 @@
 
 struct channel
 {
+
     uint16_t dataIn[MAX_DATA] = {0};   // Analog reading data [0-2^12]
     uint16_t dataFilt[MAX_DATA] = {0}; // Filtered data
-    uint16_t dataOut[SEND_DATA] = {0}; // Processed data
+    uint8_t dataOut[SEND_DATA] = {0};  // Processed data
     uint16_t triggerVal = 2000;        // Value to trigger
     uint16_t dataIndex = 0;            // Actual data index
     uint16_t dataOutIndex = 0;         // Data to be sent index
@@ -77,8 +78,6 @@ enum eventsList
 
 uint8_t event = SAMPLE;
 
-void Timer0IntHandler();
-
 /////////////////////////////////////////////////
 /////////////////// PROTOTYPES //////////////////
 /////////////////////////////////////////////////
@@ -88,8 +87,10 @@ void initTimer(unsigned Hz);
 
 void setup()
 {
-    Serial.begin(SERIAL_SPEED_1); // Initiallize Serial port @ 115200 baud/s
-    pinMode(PE_0, INPUT);         // Cannel 0 INPUT
+    Serial.begin(SERIAL_SPEED_USB);    // Initiallize Serial port
+    Serial6.begin(SERIAL_SPEED_WEB);   // Initiallize Serial port
+    Serial7.begin(SERIAL_SPEED_BASYS); // Initiallize Serial port
+    pinMode(PE_0, INPUT);              // Cannel 0 INPUT
 
     RCFilter_Init(&ch1.lpfRC, CUTTOF_FREQ, SAMPLE_TIME); // Init RC filter
     ch1.peakDetection.begin(1, 1, 1);                    // peakdetection.begin(lag,threshold,influence); 0.8
@@ -148,7 +149,7 @@ void loop()
 
             if (ch1.trigger)
             {
-                ch1.dataOut[ch1.dataOutIndex] = ch1.dataFilt[ch1.dataIndex]; // Save data to out vector
+                ch1.dataOut[ch1.dataOutIndex] = map(ch1.dataFilt[ch1.dataIndex], 0, 4095, 0, 254); // Save data to out vector
                 ch1.dataOutIndex++;
                 if (ch1.dataOutIndex == SEND_DATA) // Stop saving and compute freq
                 {
@@ -206,7 +207,6 @@ void loop()
 #if DEBUG
         for (ch1.dataOutIndex = 0; ch1.dataOutIndex < SEND_DATA; ch1.dataOutIndex++)
         {
-
             Serial.print(ch1.dataIn[ch1.dataOutIndex]);
             Serial.print(",");
             Serial.print(ch1.dataFilt[ch1.dataOutIndex]);
@@ -222,12 +222,14 @@ void loop()
 #endif
 
 #if BASYS
+
         Serial7.write(0b11111111); // Starting header
         for (ch1.dataOutIndex = 0; ch1.dataOutIndex < SEND_DATA; ch1.dataOutIndex++)
         {
-            Serial7.write(ch1.peak[ch1.dataOutIndex]);
+            Serial7.write(255 - ch1.dataOut[ch1.dataOutIndex]); // Data to Basys
         }
-        Serial7.write(100);
+        Serial7.write(127); // Offset
+        Serial7.write(5); //
 #endif
 
         // Clean variables
