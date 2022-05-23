@@ -20,7 +20,7 @@
 
 #define SYSTEM_CLOCK 120000000 // System clock speed Hz
 
-#define DEBUG 1
+#define DEBUG 0
 #define TIVA_WEB 0
 #define BASYS 1
 
@@ -28,18 +28,37 @@
 #define SERIAL_SPEED_BASYS 100000
 #define SERIAL_SPEED_WEB 115200
 
-#define TIMER_FREQ 4096 // Frequency of the timer ISR
-#define INTERVAL 10     // Trigger +/- interval
-#define MAX_DATA 2000   // Maximun data to store
-#define SEND_DATA 640   // Maximun data to send
+#define INTERVAL 10   // Trigger +/- interval
+#define MAX_DATA 2000 // Maximun data to store
+#define SEND_DATA 640 // Maximun data to send
 
-#define CUTTOF_FREQ 6000.0f  // LPF cutoff frequency
-#define SAMPLE_TIME 0.00001f // LPF sample time
+#define CUTTOF_FREQ 50000.0f  // LPF cutoff frequency
+#define SAMPLE_TIME 0.000001f // LPF sample time
 
 /////////////////////////////////////////////////
 /////////////////// VARIABLES ///////////////////
 /////////////////////////////////////////////////
+enum eventsList
+{
+    SAMPLE,
+    PROCESS,
+    SEND
+};
 
+enum ranges
+{
+    M10_P10 = 10000,
+    M4_P4 = 4000,
+    M2_P2 = 2000
+};
+
+enum frequencies4Julia
+{
+    freq0 = 12800,
+    freq1 = 6400,
+    freq2 = 3200,
+    freq3 = 1600
+};
 struct channel
 {
 
@@ -50,9 +69,9 @@ struct channel
     uint16_t dataIndex = 0;            // Actual data index
     uint16_t dataOutIndex = 0;         // Data to be sent index
     int peak[MAX_DATA] = {0};          // If data is increasing returns 1. If data is decreasing returns -1
-    int range=10;                       // 10 to [-10,10], 4 to [-4,4], 1 to [-1,1]
-    int freq=4096;                      // 6400 son 10 ms/div  3200 20 ms/div 1600 40 ms/div 12800 Hz 5ms/div
-    int tim_div=2;                     //1=12800 Hz, 2=6400Hz, 4=3200Hz 8=1600 Hz 
+    int range = M10_P10;               // 10 to [-10,10], 4 to [-4,4], 1 to [-1,1]
+    uint16_t samplingFreq = freq2;     // ISR Sampling Freq
+    uint8_t tim_div = 2;               // 1=12800 Hz, 2=6400Hz, 4=3200Hz 8=1600 Hz
     bool newData = false;              // TRUE when timer triggers
     bool trigger = false;              // TRUE if trigger is enabled
     PeakDetection peakDetection;       // Peak detector
@@ -70,14 +89,9 @@ struct channel
     uint16_t aux2 = 0;
     bool firstPeak = false;
 
-} ch1;
+    int rangeVector[SEND_DATA] = {0};
 
-enum eventsList
-{
-    SAMPLE,
-    PROCESS,
-    SEND
-};
+} ch1;
 
 uint8_t event = SAMPLE;
 
@@ -98,7 +112,7 @@ void setup()
     RCFilter_Init(&ch1.lpfRC, CUTTOF_FREQ, SAMPLE_TIME); // Init RC filter
     ch1.peakDetection.begin(1, 1, 1);                    // peakdetection.begin(lag,threshold,influence); 0.8
 
-    initTimer(TIMER_FREQ);
+    initTimer(ch1.samplingFreq);
 }
 
 void loop()
@@ -152,7 +166,17 @@ void loop()
 
             if (ch1.trigger)
             {
-                ch1.dataOut[ch1.dataOutIndex] = map(ch1.dataFilt[ch1.dataIndex]*10/range, 0, 4095, 0, 254); // Save data to out vector
+                // ch1.dataOut[ch1.dataOutIndex] = map(ch1.dataFilt[ch1.dataIndex], 0, 4095, 0, 254); // Save data to out vector
+                ch1.rangeVector[ch1.dataOutIndex] = map(ch1.dataFilt[ch1.dataIndex], 0, 4095, -5000, 5000);
+                if (ch1.rangeVector[ch1.dataOutIndex] > ch1.range)
+                {
+                    ch1.rangeVector[ch1.dataOutIndex] = ch1.range;
+                }
+                else if (ch1.rangeVector[ch1.dataOutIndex] < -ch1.range)
+                {
+                    ch1.rangeVector[ch1.dataOutIndex] = -ch1.range;
+                }
+                ch1.dataOut[ch1.dataOutIndex] = map(ch1.rangeVector[ch1.dataOutIndex], -ch1.range, ch1.range, 0, 254);
                 ch1.dataOutIndex++;
                 if (ch1.dataOutIndex == SEND_DATA) // Stop saving and compute freq
                 {
@@ -176,7 +200,7 @@ void loop()
                                     if ((ch1.aux2 - ch1.aux) >= 3)
                                     {
                                         ch1.firstPeak = false;
-                                        ch1.freq[ch1.freqIndex] = ((float)(TIMER_FREQ)) / ((float)(ch1.aux2 - ch1.aux));
+                                        ch1.freq[ch1.freqIndex] = ((float)(ch1.samplingFreq)) / ((float)(ch1.aux2 - ch1.aux));
                                         ch1.freqIndex++;
                                         if (ch1.freqIndex == 4)
                                         {
@@ -229,11 +253,11 @@ void loop()
         Serial7.write(0b11111111); // Starting header
         for (ch1.dataOutIndex = 0; ch1.dataOutIndex < SEND_DATA; ch1.dataOutIndex++)
         {
-            Serial7.write(255 - ch1.dataOut[ch1.dataOutIndex]); // Data to Basys
+            Serial7.write(254 - ch1.dataOut[ch1.dataOutIndex]); // Data to Basys
         }
-        Serial7.write(127); // Offset
-        Serial7.write(range/2); //volts_div
-        Serial7.write(tim_div); //tim_div
+        Serial7.write(120);                      // Offset
+        Serial7.write(ch1.range / 2000);         // volts_div
+        Serial7.write(freq0 / ch1.samplingFreq); // tim_div
 #endif
 
         // Clean variables
@@ -261,7 +285,12 @@ void loop()
         Serial6.write(freqInt);
         Serial6.write(freqDec);
 #endif
-
+        /*
+        delay(1000);
+        TimerDisable(TIMER1_BASE, TIMER_A);
+        ch1.samplingFreq = freq3;
+        initTimer(ch1.samplingFreq);
+        */
         ch1.newData = false; // Unlock storing data for sampling
         event = SAMPLE;
         break;
