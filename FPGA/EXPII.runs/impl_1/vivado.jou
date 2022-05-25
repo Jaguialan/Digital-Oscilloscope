@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2019.1 (64-bit)
+# SW Build 2552052 on Fri May 24 14:49:42 MDT 2019
+# IP Build 2548770 on Fri May 24 18:01:18 MDT 2019
+# Start of session at: Wed May 25 12:44:51 2022
+# Process ID: 15848
+# Current directory: C:/Users/julia/Documents/JULIA/MISEA/EXPII/EXPII/EXPII.runs/impl_1
+# Command line: vivado.exe -log sistema.vdi -applog -product Vivado -messageDb vivado.pb -mode batch -source sistema.tcl -notrace
+# Log file: C:/Users/julia/Documents/JULIA/MISEA/EXPII/EXPII/EXPII.runs/impl_1/sistema.vdi
+# Journal file: C:/Users/julia/Documents/JULIA/MISEA/EXPII/EXPII/EXPII.runs/impl_1\vivado.jou
+#-----------------------------------------------------------
+source sistema.tcl -notrace

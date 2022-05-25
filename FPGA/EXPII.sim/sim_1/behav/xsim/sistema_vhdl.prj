@@ -1,0 +1,9 @@
+# compile vhdl design source files
+vhdl xil_defaultlib  \
+"../../../../Sources/VGA/draw.vhd" \
+"../../../../EXPII.srcs/sources_1/new/sm.vhd" \
+"../../../../Sources/VGA/vga.vhd" \
+"../../../../Sources/VGA/sistema.vhd" \
+
+# Do not sort compile order
+nosort
