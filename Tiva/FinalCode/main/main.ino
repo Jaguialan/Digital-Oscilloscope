@@ -91,7 +91,7 @@ struct channel
 
     int rangeVector[SEND_DATA] = {0};
 
-} ch1;
+} ch1, ch2;
 
 uint8_t event = SAMPLE;
 
@@ -107,10 +107,13 @@ void setup()
     Serial.begin(SERIAL_SPEED_USB);    // Initiallize Serial port
     Serial6.begin(SERIAL_SPEED_WEB);   // Initiallize Serial port
     Serial7.begin(SERIAL_SPEED_BASYS); // Initiallize Serial port
+    Serial5.begin(SERIAL_SPEED_BASYS); // Initiallize Serial port
     pinMode(PE_0, INPUT);              // Cannel 0 INPUT
 
     RCFilter_Init(&ch1.lpfRC, CUTTOF_FREQ, SAMPLE_TIME); // Init RC filter
     ch1.peakDetection.begin(1, 1, 1);                    // peakdetection.begin(lag,threshold,influence); 0.8
+    RCFilter_Init(&ch2.lpfRC, CUTTOF_FREQ, SAMPLE_TIME); // Init RC filter
+    ch2.peakDetection.begin(1, 1, 1);                    // peakdetection.begin(lag,threshold,influence); 0.8
 
     initTimer(ch1.samplingFreq);
 }
@@ -134,6 +137,19 @@ void loop()
                 ch1.newData = false;
             }
         }
+        if (ch2.newData)
+        {
+            ch2.dataIndex++;
+            if (ch2.dataIndex == MAX_DATA)
+            {
+                ch2.dataIndex = 0;
+                event = PROCESS;
+            }
+            else
+            {
+                ch2.newData = false;
+            }
+        }
         break;
     }
     case PROCESS:
@@ -155,7 +171,26 @@ void loop()
 
         // Prepare data to send SEND_DATA values
 
+        ch2.dataOutIndex = 0;
+
+            while (ch2.dataIndex < MAX_DATA)
+        {
+            ch2.dataFilt[ch1.dataIndex] = RCFilter_Update(&ch2.lpfRC, ch2.dataIn[ch2.dataIndex]); // Add data point to filter
+            ch2.peakDetection.add(ch2.dataFilt[ch1.dataIndex]);                                   // Add filtered data point to peak detector
+            ch2.peak[ch2.dataIndex] = ch2.peakDetection.getPeak();                                // Store peaks
+            ch2.max_val = max(ch2.max_val, ch2.dataFilt[ch2.dataIndex]);                          // Store maximum value
+            ch2.min_val = min(ch2.min_val, ch2.dataFilt[ch2.dataIndex]);                          // Store minimum value
+            ch2.dataIndex++;                                                                      // Update data Index
+        }
+        ch2.dataIndex = 0;
+
+        ch1.vpp = ch1.max_val - ch1.min_val;
+        ch2.vpp = ch2.max_val - ch2.min_val;
+
+        // Prepare data to send SEND_DATA values
+
         ch1.dataOutIndex = 0;
+        ch2.dataOutIndex = 0;
 
         while (ch1.dataIndex < MAX_DATA) // SEND_DATA is the max allowed lenght
         {
@@ -225,6 +260,74 @@ void loop()
             ch1.dataIndex++;
         }
 
+        while (ch2.dataIndex < MAX_DATA) // SEND_DATA is the max allowed lenght
+        {
+            if (((ch2.dataFilt[ch2.dataIndex] <= (ch2.triggerVal + INTERVAL)) && (ch2.dataFilt[ch2.dataIndex] >= (ch2.triggerVal - INTERVAL))) && (ch2.peak[ch2.dataIndex] == 1))
+            {
+                ch2.trigger = true;
+            }
+
+            if (ch2.trigger)
+            {
+                // ch2.dataOut[ch2.dataOutIndex] = map(ch2.dataFilt[ch2.dataIndex], 0, 4095, 0, 254); // Save data to out vector
+                ch2.rangeVector[ch2.dataOutIndex] = map(ch2.dataFilt[ch2.dataIndex], 0, 4095, -5000, 5000);
+                if (ch2.rangeVector[ch2.dataOutIndex] > ch2.range)
+                {
+                    ch2.rangeVector[ch2.dataOutIndex] = ch2.range;
+                }
+                else if (ch2.rangeVector[ch2.dataOutIndex] < -ch2.range)
+                {
+                    ch2.rangeVector[ch2.dataOutIndex] = -ch2.range;
+                }
+                ch2.dataOut[ch2.dataOutIndex] = map(ch2.rangeVector[ch2.dataOutIndex], -ch2.range, ch2.range, 0, 254);
+                ch2.dataOutIndex++;
+                if (ch2.dataOutIndex == SEND_DATA) // Stop saving and compute freq
+                {
+                    ch2.trigger = false;
+                    int lastPeak = ch2.peak[0];
+
+                    for (ch2.dataOutIndex = 0; ch2.dataOutIndex < SEND_DATA; ch2.dataOutIndex++)
+                    {
+                        if (ch2.peak[ch2.dataOutIndex] == -1) // Decreasing
+                        {
+                            if (lastPeak == 1) // Increasing
+                            {
+                                if (!ch2.firstPeak)
+                                {
+                                    ch2.aux = ch2.dataOutIndex;
+                                    ch2.firstPeak = true;
+                                }
+                                else
+                                {
+                                    ch2.aux2 = ch2.dataOutIndex;
+                                    if ((ch2.aux2 - ch2.aux) >= 3)
+                                    {
+                                        ch2.firstPeak = false;
+                                        ch2.freq[ch2.freqIndex] = ((float)(ch2.samplingFreq)) / ((float)(ch2.aux2 - ch2.aux));
+                                        ch2.freqIndex++;
+                                        if (ch2.freqIndex == 4)
+                                        {
+                                            ch2.freqIndex = 0;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        lastPeak = ch2.peak[ch2.dataOutIndex];
+                    }
+
+                    ch2.freq_total = 0; // Clean frequency
+                    ch2.freq_total = ch2.freq[2];
+
+                    // vpp = max_val - min_val;
+
+                    break;
+                }
+            }
+            ch2.dataIndex++;
+        }
+
         event = SEND;
         break;
     }
@@ -256,8 +359,19 @@ void loop()
             Serial7.write(254 - ch1.dataOut[ch1.dataOutIndex]); // Data to Basys
         }
         Serial7.write(120);                      // Offset
-        Serial7.write(ch1.range / 2000);         // volts_div
+        Serial7.write(ch2.range / 2000);         // volts_div
         Serial7.write(freq0 / ch1.samplingFreq); // tim_div
+        Serial7.write(1); // enable_ch1
+
+        Serial5.write(0b11111111); // Starting header
+        for (ch2.dataOutIndex = 0; ch2.dataOutIndex < SEND_DATA; ch2.dataOutIndex++)
+        {
+            Serial5.write(254 - ch2.dataOut[ch2.dataOutIndex]); // Data to Basys
+        }
+        Serial5.write(120);                      // Offset
+        Serial5.write(ch2.range / 2000);         // volts_div
+        Serial5.write(freq0 / ch2.samplingFreq); // tim_div
+        Serial5.write(1); // enable_ch2
 #endif
 
         // Clean variables
@@ -269,6 +383,14 @@ void loop()
         ch1.min_val = 255;
         ch1.max_val = 0;
         ch1.vpp = 0;
+
+        ch2.aux = 0;
+        ch2.aux2 = 0;
+        ch2.dataIndex = 0;
+        ch2.firstPeak = false;
+        ch2.min_val = 255;
+        ch2.max_val = 0;
+        ch2.vpp = 0;
 
         // Convert variables for webpage
 
@@ -292,6 +414,7 @@ void loop()
         initTimer(ch1.samplingFreq);
         */
         ch1.newData = false; // Unlock storing data for sampling
+        ch2.newData = false; // Unlock storing data for sampling
         event = SAMPLE;
         break;
     }
@@ -322,5 +445,10 @@ void Timer0IntHandler()
     {
         ch1.newData = true;
         ch1.dataIn[ch1.dataIndex] = analogRead(PE_0);
+    }
+    if (!ch2.newData)
+    {
+        ch2.newData = true;
+        ch2.dataIn[ch2.dataIndex] = analogRead(PE_1);
     }
 }
