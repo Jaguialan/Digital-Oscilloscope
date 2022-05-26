@@ -220,7 +220,7 @@ void printHTML()
   }
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/html");
-  // client.println("Refresh: 1");
+  client.println("Refresh: 5");
   client.println();
   client.println("<!DOCTYPE html>");
   client.println("<html lang=\"en-US\" encoding=\"UTF-16\">");

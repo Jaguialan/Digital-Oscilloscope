@@ -20,19 +20,20 @@
 
 #define SYSTEM_CLOCK 120000000 // System clock speed Hz
 
-#define DEBUG 0
-#define TIVA_WEB 0
+#define DEBUG 1
+#define TIVA_WEB 1
 #define BASYS 1
 
 #define SERIAL_SPEED_USB 115200
 #define SERIAL_SPEED_BASYS 100000
+#define SERIAL_SPEED_BASYS_2 100000
 #define SERIAL_SPEED_WEB 115200
 
 #define INTERVAL 10   // Trigger +/- interval
 #define MAX_DATA 2000 // Maximun data to store
 #define SEND_DATA 640 // Maximun data to send
 
-#define CUTTOF_FREQ 50000.0f  // LPF cutoff frequency
+#define CUTTOF_FREQ 5000.0f  // LPF cutoff frequency
 #define SAMPLE_TIME 0.000001f // LPF sample time
 
 /////////////////////////////////////////////////
@@ -69,8 +70,8 @@ struct channel
     uint16_t dataIndex = 0;            // Actual data index
     uint16_t dataOutIndex = 0;         // Data to be sent index
     int peak[MAX_DATA] = {0};          // If data is increasing returns 1. If data is decreasing returns -1
-    int range = M10_P10;               // 10 to [-10,10], 4 to [-4,4], 1 to [-1,1]
-    uint16_t samplingFreq = freq2;     // ISR Sampling Freq
+    int range = M4_P4;               // 10 to [-10,10], 4 to [-4,4], 1 to [-1,1]
+    uint16_t samplingFreq = freq0;     // ISR Sampling Freq
     uint8_t tim_div = 2;               // 1=12800 Hz, 2=6400Hz, 4=3200Hz 8=1600 Hz
     bool newData = false;              // TRUE when timer triggers
     bool trigger = false;              // TRUE if trigger is enabled
@@ -107,8 +108,10 @@ void setup()
     Serial.begin(SERIAL_SPEED_USB);    // Initiallize Serial port
     Serial6.begin(SERIAL_SPEED_WEB);   // Initiallize Serial port
     Serial7.begin(SERIAL_SPEED_BASYS); // Initiallize Serial port
-    Serial5.begin(SERIAL_SPEED_BASYS); // Initiallize Serial port
-    pinMode(PE_0, INPUT);              // Cannel 0 INPUT
+    Serial5.begin(SERIAL_SPEED_BASYS_2); // Initiallize Serial port
+
+    pinMode(PE_0, INPUT);              // Channel 0 INPUT
+    pinMode(PE_1, INPUT);              // Channel 1 INPUT
 
     RCFilter_Init(&ch1.lpfRC, CUTTOF_FREQ, SAMPLE_TIME); // Init RC filter
     ch1.peakDetection.begin(1, 1, 1);                    // peakdetection.begin(lag,threshold,influence); 0.8
@@ -171,12 +174,12 @@ void loop()
 
         // Prepare data to send SEND_DATA values
 
-        ch2.dataOutIndex = 0;
+        ch1.dataOutIndex = 0;
 
-            while (ch2.dataIndex < MAX_DATA)
+        while (ch2.dataIndex < MAX_DATA)
         {
-            ch2.dataFilt[ch1.dataIndex] = RCFilter_Update(&ch2.lpfRC, ch2.dataIn[ch2.dataIndex]); // Add data point to filter
-            ch2.peakDetection.add(ch2.dataFilt[ch1.dataIndex]);                                   // Add filtered data point to peak detector
+            ch2.dataFilt[ch2.dataIndex] = RCFilter_Update(&ch2.lpfRC, ch2.dataIn[ch2.dataIndex]); // Add data point to filter
+            ch2.peakDetection.add(ch2.dataFilt[ch2.dataIndex]);                                   // Add filtered data point to peak detector
             ch2.peak[ch2.dataIndex] = ch2.peakDetection.getPeak();                                // Store peaks
             ch2.max_val = max(ch2.max_val, ch2.dataFilt[ch2.dataIndex]);                          // Store maximum value
             ch2.min_val = min(ch2.min_val, ch2.dataFilt[ch2.dataIndex]);                          // Store minimum value
@@ -184,12 +187,10 @@ void loop()
         }
         ch2.dataIndex = 0;
 
-        ch1.vpp = ch1.max_val - ch1.min_val;
         ch2.vpp = ch2.max_val - ch2.min_val;
 
         // Prepare data to send SEND_DATA values
 
-        ch1.dataOutIndex = 0;
         ch2.dataOutIndex = 0;
 
         while (ch1.dataIndex < MAX_DATA) // SEND_DATA is the max allowed lenght
@@ -335,7 +336,7 @@ void loop()
     {
 
 #if DEBUG
-        for (ch1.dataOutIndex = 0; ch1.dataOutIndex < SEND_DATA; ch1.dataOutIndex++)
+        for (ch1.dataOutIndex = 0, ch2.dataOutIndex = 0; ch1.dataOutIndex < SEND_DATA; ch1.dataOutIndex++, ch2.dataOutIndex++)
         {
             Serial.print(ch1.dataIn[ch1.dataOutIndex]);
             Serial.print(",");
@@ -347,7 +348,20 @@ void loop()
             Serial.print(",");
             Serial.print(ch1.freq_total);
             Serial.print(",");
-            Serial.println(ch1.vpp);
+            Serial.print(ch1.vpp);
+            Serial.print(",");
+            Serial.print(ch2.dataIn[ch2.dataOutIndex]);
+            Serial.print(",");
+            Serial.print(ch2.dataFilt[ch2.dataOutIndex]);
+            Serial.print(",");
+            Serial.print(ch2.dataOut[ch2.dataOutIndex]);
+            Serial.print(",");
+            Serial.print(ch2.peak[ch2.dataOutIndex]);
+            Serial.print(",");
+            Serial.print(ch2.freq_total);
+            Serial.print(",");
+            Serial.println(ch2.vpp);
+            
         }
 #endif
 
@@ -359,9 +373,9 @@ void loop()
             Serial7.write(254 - ch1.dataOut[ch1.dataOutIndex]); // Data to Basys
         }
         Serial7.write(120);                      // Offset
-        Serial7.write(ch2.range / 2000);         // volts_div
+        Serial7.write(ch1.range / 2000);         // volts_div
         Serial7.write(freq0 / ch1.samplingFreq); // tim_div
-        Serial7.write(1); // enable_ch1
+        Serial7.write(1);                        // enable_ch1
 
         Serial5.write(0b11111111); // Starting header
         for (ch2.dataOutIndex = 0; ch2.dataOutIndex < SEND_DATA; ch2.dataOutIndex++)
@@ -371,7 +385,7 @@ void loop()
         Serial5.write(120);                      // Offset
         Serial5.write(ch2.range / 2000);         // volts_div
         Serial5.write(freq0 / ch2.samplingFreq); // tim_div
-        Serial5.write(1); // enable_ch2
+        Serial5.write(1);                        // enable_ch2
 #endif
 
         // Clean variables
