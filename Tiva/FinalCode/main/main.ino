@@ -20,7 +20,7 @@
 
 #define SYSTEM_CLOCK 120000000 // System clock speed Hz
 
-#define DEBUG 1
+#define DEBUG 0
 #define TIVA_WEB 1
 #define BASYS 1
 
@@ -33,7 +33,7 @@
 #define MAX_DATA 2000 // Maximun data to store
 #define SEND_DATA 640 // Maximun data to send
 
-#define CUTTOF_FREQ 5000.0f  // LPF cutoff frequency
+#define CUTTOF_FREQ 5000.0f   // LPF cutoff frequency
 #define SAMPLE_TIME 0.000001f // LPF sample time
 
 /////////////////////////////////////////////////
@@ -59,7 +59,7 @@ enum frequencies4Julia
     freq1 = 6400,
     freq2 = 3200,
     freq3 = 1600
-};
+} frequencias_sampling;
 struct channel
 {
 
@@ -70,7 +70,7 @@ struct channel
     uint16_t dataIndex = 0;            // Actual data index
     uint16_t dataOutIndex = 0;         // Data to be sent index
     int peak[MAX_DATA] = {0};          // If data is increasing returns 1. If data is decreasing returns -1
-    int range = M4_P4;               // 10 to [-10,10], 4 to [-4,4], 1 to [-1,1]
+    int range = M4_P4;                 // 10 to [-10,10], 4 to [-4,4], 1 to [-1,1]
     uint16_t samplingFreq = freq0;     // ISR Sampling Freq
     uint8_t tim_div = 2;               // 1=12800 Hz, 2=6400Hz, 4=3200Hz 8=1600 Hz
     bool newData = false;              // TRUE when timer triggers
@@ -84,6 +84,7 @@ struct channel
     float freq[SEND_DATA] = {0};
     float freq_total = 0;
     uint16_t freqIndex = 0;
+    bool enable = false;
 
     // frequency detection variables
     uint16_t aux = 0;
@@ -105,13 +106,13 @@ void initTimer(unsigned Hz);
 
 void setup()
 {
-    Serial.begin(SERIAL_SPEED_USB);    // Initiallize Serial port
-    Serial6.begin(SERIAL_SPEED_WEB);   // Initiallize Serial port
-    Serial7.begin(SERIAL_SPEED_BASYS); // Initiallize Serial port
+    Serial.begin(SERIAL_SPEED_USB);      // Initiallize Serial port
+    Serial6.begin(SERIAL_SPEED_WEB);     // Initiallize Serial port
+    Serial7.begin(SERIAL_SPEED_BASYS);   // Initiallize Serial port
     Serial5.begin(SERIAL_SPEED_BASYS_2); // Initiallize Serial port
 
-    pinMode(PE_0, INPUT);              // Channel 0 INPUT
-    pinMode(PE_1, INPUT);              // Channel 1 INPUT
+    pinMode(PE_0, INPUT); // Channel 0 INPUT
+    pinMode(PE_1, INPUT); // Channel 1 INPUT
 
     RCFilter_Init(&ch1.lpfRC, CUTTOF_FREQ, SAMPLE_TIME); // Init RC filter
     ch1.peakDetection.begin(1, 1, 1);                    // peakdetection.begin(lag,threshold,influence); 0.8
@@ -361,12 +362,82 @@ void loop()
             Serial.print(ch2.freq_total);
             Serial.print(",");
             Serial.println(ch2.vpp);
-            
+        }
+#endif
+
+        // Convert variables for webpage
+
+        uint8_t freqInt, freqDec;
+        int freqmHz;
+
+        freqmHz = ch1.freq_total * 100;
+        freqInt = freqmHz / 100; // Get integer part
+        freqDec = freqmHz % 100; // Get decimal part
+
+#if TIVA_WEB
+        Serial6.write(0b11111111); // 255 Starting header
+        Serial6.write(ch1.vpp);
+        Serial6.write(freqInt);
+        Serial6.write(freqDec);
+
+        uint8_t voltios = 0;
+        uint8_t tiempos = 0;
+        uint8_t inByte;
+        while (Serial6.available() > 0)
+        {
+            inByte = Serial6.read();
+            if (inByte == 0b11111111)
+            { // Header byte
+                voltios = Serial6.read();
+                tiempos = Serial6.read();
+                ch1.enable = Serial6.read();
+                ch2.enable = Serial6.read();
+
+                switch (tiempos)
+                {
+                case 3:
+                    ch1.samplingFreq = freq0;
+                    break;
+                case 2:
+                    ch1.samplingFreq = freq1;
+                    break;
+                case 1:
+                    ch1.samplingFreq = freq2;
+                    break;
+                case 0:
+                    ch1.samplingFreq = freq3;
+                    break;
+
+                default:
+                    break;
+                }
+
+                switch (voltios)
+                {
+                case 2:
+                    ch1.range = M10_P10;
+                    ch2.range = M10_P10;
+                    break;
+                case 1:
+                    ch1.range = M4_P4;
+                    ch2.range = M4_P4;
+                    break;
+                case 0:
+                    ch1.range = M2_P2;
+                    ch2.range = M2_P2;
+                    break;
+
+                default:
+                    break;
+                }
+
+                Serial6.flush();
+                break;
+            }
         }
 #endif
 
 #if BASYS
-
         Serial7.write(0b11111111); // Starting header
         for (ch1.dataOutIndex = 0; ch1.dataOutIndex < SEND_DATA; ch1.dataOutIndex++)
         {
@@ -375,7 +446,7 @@ void loop()
         Serial7.write(120);                      // Offset
         Serial7.write(ch1.range / 2000);         // volts_div
         Serial7.write(freq0 / ch1.samplingFreq); // tim_div
-        Serial7.write(1);                        // enable_ch1
+        Serial7.write(ch1.enable);               // enable_ch1
 
         Serial5.write(0b11111111); // Starting header
         for (ch2.dataOutIndex = 0; ch2.dataOutIndex < SEND_DATA; ch2.dataOutIndex++)
@@ -385,8 +456,11 @@ void loop()
         Serial5.write(120);                      // Offset
         Serial5.write(ch2.range / 2000);         // volts_div
         Serial5.write(freq0 / ch2.samplingFreq); // tim_div
-        Serial5.write(1);                        // enable_ch2
+        Serial5.write(ch2.enable);               // enable_ch2
 #endif
+
+        TimerDisable(TIMER1_BASE, TIMER_A);
+        initTimer(ch1.samplingFreq);
 
         // Clean variables
 
@@ -406,27 +480,6 @@ void loop()
         ch2.max_val = 0;
         ch2.vpp = 0;
 
-        // Convert variables for webpage
-
-        uint8_t freqInt, freqDec;
-        int freqmHz;
-
-        freqmHz = ch1.freq_total * 100;
-        freqInt = freqmHz / 100; // Get integer part
-        freqDec = freqmHz % 100; // Get decimal part
-
-#if TIVA_WEB
-        Serial6.write(0b11111111); // 255 Starting header
-        Serial6.write(ch1.vpp);
-        Serial6.write(freqInt);
-        Serial6.write(freqDec);
-#endif
-        /*
-        delay(1000);
-        TimerDisable(TIMER1_BASE, TIMER_A);
-        ch1.samplingFreq = freq3;
-        initTimer(ch1.samplingFreq);
-        */
         ch1.newData = false; // Unlock storing data for sampling
         ch2.newData = false; // Unlock storing data for sampling
         event = SAMPLE;

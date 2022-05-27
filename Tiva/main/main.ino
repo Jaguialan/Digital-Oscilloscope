@@ -26,10 +26,18 @@ EthernetServer server(80);
 /////////////////// VARIABLES ///////////////////
 /////////////////////////////////////////////////
 
-float vpp = 10;
-float vp = 5;
-float freq = 1000;
-float period = 1;
+float vpp = 0;
+float vp = 0;
+float freq = 0;
+float period = 0;
+
+uint8_t escala_tiempo_para_julia1 = 0;
+uint8_t escala_voltaje_para_julia1 = 0;
+uint8_t escala_tiempo_para_julia2 = 0;
+uint8_t escala_voltaje_para_julia2 = 0;
+
+bool ch1 = false;
+bool ch2 = false;
 
 void setup()
 {
@@ -142,6 +150,80 @@ void loop()
         {
           client.println(period);
         }
+        else if (currentLine.endsWith("GET /inc_t1 "))
+        {
+          if (escala_tiempo_para_julia1 == 3)
+            escala_tiempo_para_julia1 = 3;
+          else
+            escala_tiempo_para_julia1++;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /dec_t1 "))
+        {
+          if (escala_tiempo_para_julia1 == 0)
+            escala_tiempo_para_julia1 = 0;
+          else
+            escala_tiempo_para_julia1--;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /inc_v1 "))
+        {
+          if (escala_voltaje_para_julia1 == 2)
+            escala_voltaje_para_julia1 = 2;
+          else
+            escala_voltaje_para_julia1++;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /dec_v1 "))
+        {
+          if (escala_voltaje_para_julia1 == 0)
+            escala_voltaje_para_julia1 = 0;
+          else
+            escala_voltaje_para_julia1--;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /inc_t2 "))
+        {
+          if (escala_tiempo_para_julia2 == 3)
+            escala_tiempo_para_julia2 = 3;
+          else
+            escala_tiempo_para_julia2++;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /dec_t2 "))
+        {
+          if (escala_tiempo_para_julia2 == 0)
+            escala_tiempo_para_julia2 = 0;
+          else
+            escala_tiempo_para_julia2--;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /inc_v2 "))
+        {
+          if (escala_voltaje_para_julia2 == 2)
+            escala_voltaje_para_julia2 = 2;
+          else
+            escala_voltaje_para_julia2++;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /dec_v2 "))
+        {
+          if (escala_voltaje_para_julia2 == 0)
+            escala_voltaje_para_julia2 = 0;
+          else
+            escala_voltaje_para_julia2--;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /en_ch1 "))
+        {
+          ch1 = !ch1;
+          printHTML();
+        }
+        else if (currentLine.endsWith("GET /en_ch2 "))
+        {
+          ch2 = !ch2;
+          printHTML();
+        }
       }
     }
     // close the connection:
@@ -218,9 +300,19 @@ void printHTML()
       break;
     }
   }
+
+  Serial6.write(0b11111111); // Header
+  Serial6.write(escala_voltaje_para_julia1);
+  Serial6.write(escala_tiempo_para_julia1);
+  // Serial6.write(escala_voltaje_para_julia2);
+  // Serial6.write(escala_tiempo_para_julia2);
+  // Serial6.write(escala_voltaje_para_julia2);
+  Serial6.write(ch1);
+  Serial6.write(ch2);
+
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/html");
-  client.println("Refresh: 5");
+  // client.println("Refresh: 1");
   client.println();
   client.println("<!DOCTYPE html>");
   client.println("<html lang=\"en-US\" encoding=\"UTF-16\">");
@@ -243,7 +335,7 @@ void printHTML()
   client.println("<div class=\"oscMainBody\">");
   client.println("<div class=\"oscValsLeft\">");
   client.println("");
-  client.println("<h1 class=\"mainText\">VALORES</h1>");
+  client.println("<h1 class=\"mainText\">VALUES</h1>");
   client.println("");
   client.println("<div class=\"dataField\">");
   client.println("<p style=\"display: inline-block\" id=\"Vpp\">");
@@ -294,37 +386,77 @@ void printHTML()
   client.println("</div>");
   client.println("");
   client.println("<div class=\"oscValsCenter\">");
-  client.println("<h1>ESCALA DE TIEMPO</h1>");
+  client.println("<h1>TIME SCALE</h1>");
+  client.println("<h3>CH1    CH2</h3>");
   client.println("<div>");
   client.println("<p style=\"display: inline-block\">");
-  client.println("<button type=\"button\" class=\"buttonCase\" id=\"incTimeScale\">&#129045 s/div</button>");
+  client.println("<button onclick=\"location.href='/inc_t1'\" type=\"button\" class=\"buttonCase\" id=\"incTimeScale\">&#129045 s/div</button>");
   client.println("</p>");
+
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/dec_t2'\" type=\"button\" class=\"buttonCase\" id=\"decTimeScale\">&#129045 s/div</button>");
+  client.println("</p>");
+
   client.println("");
   client.println("</div>");
   client.println("<div>");
   client.println("<p style=\"display: inline-block\">");
-  client.println("<button type=\"button\" class=\"buttonCase\" id=\"decTimeScale\">&#129047 s/div</button>");
+  client.println("<button onclick=\"location.href='/dec_t1'\" type=\"button\" class=\"buttonCase\" id=\"decTimeScale\">&#129047 s/div</button>");
   client.println("</p>");
+
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/dec_t2'\" type=\"button\" class=\"buttonCase\" id=\"decTimeScale\">&#129047 s/div</button>");
+  client.println("</p>");
+
   client.println("</div>");
   client.println("");
   client.println("</div>");
+  client.println("<div class=\"oscValsCenter\">");
+  client.println("<h1>VOLTAGE SCALE</h1>");
+  client.println("<h3>CH1    CH2</h3>");
+  client.println("<div>");
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/inc_v1'\" type=\"button\" class=\"buttonCase\" id=\"incVScale\">&#129045 V/div</button>");
+  client.println("</p>");
+
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/inc_v2'\" type=\"button\" class=\"buttonCase\" id=\"incVScale\">&#129045 V/div</button>");
+  client.println("</p>");
+
+  client.println("");
+  client.println("</div>");
+  client.println("<div>");
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/dec_v1'\" type=\"button\" class=\"buttonCase\" id=\"decVScale\">&#129047 V/div</button>");
+  client.println("</p>");
+
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/dec_v2'\" type=\"button\" class=\"buttonCase\" id=\"decVScale\">&#129047 V/div</button>");
+  client.println("</p>");
+
+  client.println("</div>");
+  client.println("</div>");
+  client.println("</div>");
+
+  client.println("<div class=\"oscValsCenter\">");
+  client.println("<h1>ENABLE CHANNEL</h1>");
+
+  client.println("<div>");
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/en_ch1'\" type=\"button\" class=\"buttonCase\" id=\"decVScale\">CH1</button>");
+  client.println("</p>");
+
+  client.println("<p style=\"display: inline-block\">");
+  client.println("<button onclick=\"location.href='/en_ch2'\" type=\"button\" class=\"buttonCase\" id=\"decVScale\">CH2</button>");
+  client.println("</p>");
+
+  client.println("</div>");
+
+  client.println("</div>");
+  client.println("");
+
   client.println("<div class=\"oscValsRight\">");
-  client.println("<h1>ESCALA DE VOLTAJE</h1>");
-  client.println("<div>");
-  client.println("<p style=\"display: inline-block\">");
-  client.println("<button type=\"button\" class=\"buttonCase\" id=\"incVScale\">&#129045 V/div</button>");
-  client.println("</p>");
-  client.println("");
-  client.println("</div>");
-  client.println("<div>");
-  client.println("<p style=\"display: inline-block\">");
-  client.println("<button type=\"button\" class=\"buttonCase\" id=\"decVScale\">&#129047 V/div</button>");
-  client.println("</p>");
-  client.println("</div>");
-  client.println("</div>");
-  client.println("</div>");
-  client.println("<div class=\"oscValsRight\">");
-  client.println("<a style=\"border: 1px solid; padding: 4.5px; white\" onclick=\"update_vpp(event); update_vp(event); update_freq(event); update_period(event);\">Refrescar valores</a> <br>");
+  client.println("<a style=\"border: 1px solid; padding: 4.5px; white\" onclick=\"update_vpp(event); update_vp(event); update_freq(event); update_period(event); location.href='/';\">REFRESH VALUES</a> <br>");
   client.println("</div>");
   client.println("<footer class=\"footer\">");
   client.println("<div>");
